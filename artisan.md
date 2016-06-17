@@ -2,20 +2,19 @@
 
 - [Introduction](#introduction)
 - [Writing Commands](#writing-commands)
-- [Defining Input Expectations](#defining-input-expectations)
-- [Working With Input](#working-with-input)
-- [Prompting For Input](#prompting-for-input)
-- [Writing Output To The Console](#writing-output-to-the-console)
+    - [Command Structure](#command-structure)
+- [Command I/O](#command-io)
+    - [Defining Input Expectations](#defining-input-expectations)
+    - [Retrieving Input](#retrieving-input)
+    - [Prompting For Input](#prompting-for-input)
+    - [Writing Output](#writing-output)
 - [Registering Commands](#registering-commands)
 - [Calling Commands Via Code](#calling-commands-via-code)
-- [Scheduling Artisan Commands](/docs/{{version}}/scheduling)
 
 <a name="introduction"></a>
 ## Introduction
 
-Artisan is the name of the command-line interface included with Laravel. It provides a number of helpful commands for your use while developing your application. It is driven by the powerful Symfony Console component.
-
-To view a list of all available Artisan commands, you may use the `list` command:
+Artisan is the name of the command-line interface included with Laravel. It provides a number of helpful commands for your use while developing your application. It is driven by the powerful Symfony Console component. To view a list of all available Artisan commands, you may use the `list` command:
 
     php artisan list
 
@@ -28,8 +27,6 @@ Every command also includes a "help" screen which displays and describes the com
 
 In addition to the commands provided with Artisan, you may also build your own custom commands for working with your application. You may store your custom commands in the `app/Console/Commands` directory; however, you are free to choose your own storage location as long as your commands can be autoloaded based on your `composer.json` settings.
 
-### Creating Commands
-
 To create a new command, you may use the `make:console` Artisan command, which will generate a command stub to help you get started:
 
     php artisan make:console SendEmails
@@ -38,20 +35,24 @@ The command above would generate a class at `app/Console/Commands/SendEmails.php
 
     php artisan make:console SendEmails --command=emails:send
 
+<a name="command-structure"></a>
 ### Command Structure
 
 Once your command is generated, you should fill out the `signature` and `description` properties of the class, which will be used when displaying your command on the `list` screen.
 
-The `handle` method will be called when your command is executed. You may place any command logic in this method. Let's take a look at an example command:
+The `handle` method will be called when your command is executed. You may place any command logic in this method. Let's take a look at an example command.
 
-    <?php namespace App\Console\Commands;
+Note that we are able to inject any dependencies we need into the command's constructor. The Laravel [service container](/docs/{{version}}/container) will automatically inject all dependencies type-hinted in the constructor. For greater code reusability, it is good practice to keep your console commands light and let them defer to application services to accomplish their tasks.
+
+    <?php
+
+    namespace App\Console\Commands;
 
     use App\User;
     use App\DripEmailer;
     use Illuminate\Console\Command;
-    use Illuminate\Foundation\Inspiring;
 
-    class Inspire extends Command
+    class SendEmails extends Command
     {
         /**
          * The name and signature of the console command.
@@ -98,16 +99,15 @@ The `handle` method will be called when your command is executed. You may place 
         }
     }
 
-#### Dependency Injection
-
-Note that we are able to inject any dependencies we need into the command's constructor. The Laravel [service container](/docs/{{version}}/container) will automatically inject all dependencies type-hinted in the constructor. For greater code reusability, it is good practice to keep your console commands light and let them defer to application services to accomplish their tasks.
+<a name="command-io"></a>
+## Command I/O
 
 <a name="defining-input-expectations"></a>
-## Defining Input Expectations
+### Defining Input Expectations
 
 When writing console commands, it is common to gather input from the user through arguments or options. Laravel makes it very convenient to define the input you expect from the user using the `signature` property on your commands. The `signature` property allows you to define the name, arguments, and options for the command in a single, expressive, route-like syntax.
 
-All user supplied arguments and options are wrapped in curly braces, for example:
+All user supplied arguments and options are wrapped in curly braces. In the following example, the command defines one **required** argument: `user`:
 
     /**
      * The name and signature of the console command.
@@ -116,7 +116,7 @@ All user supplied arguments and options are wrapped in curly braces, for example
      */
     protected $signature = 'email:send {user}';
 
-In this example, the command defines one **required** argument: `user`. You may also make arguments optional and define default values for optional arguments:
+You may also make arguments optional and define default values for optional arguments:
 
     // Optional argument...
     email:send {user?}
@@ -124,7 +124,7 @@ In this example, the command defines one **required** argument: `user`. You may 
     // Optional argument with default value...
     email:send {user=foo}
 
-Options, like arguments, also are a form of user input. However, they are prefixed by two hyphens (`--`) when they are specified on the command line. We can define options in the signature like so:
+Options, like arguments, are also a form of user input. However, they are prefixed by two hyphens (`--`) when they are specified on the command line. We can define options in the signature like so:
 
     /**
      * The name and signature of the console command.
@@ -133,13 +133,11 @@ Options, like arguments, also are a form of user input. However, they are prefix
      */
     protected $signature = 'email:send {user} {--queue}';
 
-In this example, the `--queue` switch may be specified when calling the Artisan command, like so:
+In this example, the `--queue` switch may be specified when calling the Artisan command. If the `--queue` switch is passed, the value of the option will be `true`. Otherwise, the value will be `false`:
 
     php artisan email:send 1 --queue
 
-If the `--queue` switch is passed, the value of the option will be `true`. Otherwise, the value will be `false`.
-
-You may also specify that the option should be assigned a value by the user. For example:
+You may also specify that the option should be assigned a value by the user by suffixing the option name with a `=` sign, indicating that a value should be provided:
 
     /**
      * The name and signature of the console command.
@@ -148,66 +146,41 @@ You may also specify that the option should be assigned a value by the user. For
      */
     protected $signature = 'email:send {user} {--queue=}';
 
-Note that we suffixed the option name with a `=` sign. This indicates that the `--queue` option should be called with a value, like so:
+In this example, the user may pass a value for the option like so:
 
     php artisan email:send 1 --queue=default
 
-Of course, you may assign default values to options:
+You may also assign default values to options:
 
     email:send {user} {--queue=default}
 
-<a name="prompting-for-input"></a>
-## Prompting For Input
+To assign a shortcut when defining an option, you may specify it before the option name and use a | delimiter to separate the shortcut from the full option name:
 
-In addition to displaying output, you may also ask the user to provide input during the execution of your command.
+    email:send {user} {--Q|queue}
 
-The `ask` method will prompt the user with the given question, accept their input, and then return the user's input back to your command. This method is useful for gathering user options while a command is executing:
+If you would like to define arguments or options to expect array inputs, you may use the `*` character:
+
+    email:send {user*}
+
+    email:send {user} {--id=*}
+
+#### Input Descriptions
+
+You may assign descriptions to input arguments and options by separating the parameter from the description using a colon:
 
     /**
-     * Execute the console command.
+     * The name and signature of the console command.
      *
-     * @return mixed
+     * @var string
      */
-    public function handle()
-    {
-        $name = $this->ask('What is your name?');
-    }
+    protected $signature = 'email:send
+                            {user : The ID of the user}
+                            {--queue= : Whether the job should be queued}';
 
-The `secret` method is similar to `ask`; however, the user's input will not be visible to them as they type in the console. This method is useful for asking for sensitive information such as a password:
+<a name="retrieving-input"></a>
+### Retrieving Input
 
-    $password = $this->secret('What is the password?');
-
-The `askWithCompletion` method can be used to provided autocompletion for possible choices. The user can still choose any answer, regardless of the choices.
-
-    $name = $this->askWithCompletion('What is your name?', ['Taylor', 'Dayle']);
-
-#### Asking The User For Confirmation
-
-If you need to ask the user for a simple confirmation, you may use the `confirm` method. By default, this method will return `false`. However, if the user enters `y` in response to the prompt, the method will return `true`.
-
-    if ($this->confirm('Do you wish to continue? [y|N]')) {
-        //
-    }
-
-You may also specify a default value to the `confirm` method, which should be `true` or `false`:
-
-    $this->confirm($question, true);
-
-#### Giving The User A Choice
-
-If you need to give the user a predefined set of choices, you may use the `choice` method. The user chooses the index of the answer, but the value of the answer will be returned to you. You may set the default value to be returned if nothing is chosen:
-
-    $name = $this->choice('What is your name?', ['Taylor', 'Dayle'], false);
-
-
-<a name="working-with-input"></a>
-## Working With Input
-
-While your command is executing, you will obviously need to access the values for the arguments and options accepted by your application. To do so, you may use the `argument` and `option` methods:
-
-#### Retrieving The Value Of A Command Argument
-
-To retrieve the value of an argument, use the `argument` method:
+While your command is executing, you will obviously need to access the values for the arguments and options accepted by your command. To do so, you may use the `argument` and `option` methods:
 
     /**
      * Execute the console command.
@@ -221,28 +194,61 @@ To retrieve the value of an argument, use the `argument` method:
         //
     }
 
-#### Retrieving All Arguments
-
-To retrieve all of the arguments an `array`, call the `argument` with no parameters:
+If you need to retrieve all of the arguments as an `array`, call `argument` with no parameters:
 
     $arguments = $this->argument();
 
-#### Retrieving The Value Of A Command Option
+Options may be retrieved just as easily as arguments using the `option` method. Like the `argument` method, you may call `option` without any parameters in order to retrieve all of the options as an `array`:
 
-Options may be retrieved just as easily as arguments. Simply use the `option` method:
-
+    // Retrieve a specific option...
     $queueName = $this->option('queue');
 
-#### Retrieving All Options
-
-To retrieve all of the options as an `array`, call the `option` method with no parameters:
-
+    // Retrieve all options...
     $options = $this->option();
 
-<a name="writing-output-to-the-console"></a>
-## Writing Output To The Console
+If the argument or option does not exist, `null` will be returned.
 
-To send output to the console, use the `info`, `comment`, `question` and `error` methods. Each of these methods will use the appropriate ANSI colors for their purpose.
+<a name="prompting-for-input"></a>
+### Prompting For Input
+
+In addition to displaying output, you may also ask the user to provide input during the execution of your command. The `ask` method will prompt the user with the given question, accept their input, and then return the user's input back to your command:
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle()
+    {
+        $name = $this->ask('What is your name?');
+    }
+
+The `secret` method is similar to `ask`, but the user's input will not be visible to them as they type in the console. This method is useful when asking for sensitive information such as a password:
+
+    $password = $this->secret('What is the password?');
+
+#### Asking For Confirmation
+
+If you need to ask the user for a simple confirmation, you may use the `confirm` method. By default, this method will return `false`. However, if the user enters `y` in response to the prompt, the method will return `true`.
+
+    if ($this->confirm('Do you wish to continue? [y|N]')) {
+        //
+    }
+
+#### Giving The User A Choice
+
+The `anticipate` method can be used to provide autocompletion for possible choices. The user can still choose any answer, regardless of the auto-completion hints:
+
+    $name = $this->anticipate('What is your name?', ['Taylor', 'Dayle']);
+
+If you need to give the user a predefined set of choices, you may use the `choice` method. The user chooses the index of the answer, but the value of the answer will be returned to you. You may set the default value to be returned if nothing is chosen:
+
+    $name = $this->choice('What is your name?', ['Taylor', 'Dayle'], $default);
+
+<a name="writing-output"></a>
+### Writing Output
+
+To send output to the console, use the `line`, `info`, `comment`, `question` and `error` methods. Each of these methods will use the appropriate ANSI colors for their purpose.
 
 To display an information message to the user, use the `info` method. Typically, this will display in the console as green text:
 
@@ -260,7 +266,11 @@ To display an error message, use the `error` method. Error message text is typic
 
     $this->error('Something went wrong!');
 
-### Table Layouts
+If you want to display plain console output, use the `line` method. The `line` method does not receive any unique coloration:
+
+    $this->line('Display this on the screen');
+
+#### Table Layouts
 
 The `table` method makes it easy to correctly format multiple rows / columns of data. Just pass in the headers and rows to the method. The width and height will be dynamically calculated based on the given data:
 
@@ -270,21 +280,21 @@ The `table` method makes it easy to correctly format multiple rows / columns of 
 
     $this->table($headers, $users);
 
-### Progress Bar
+#### Progress Bars
 
 For long running tasks, it could be helpful to show a progress indicator. Using the output object, we can start, advance and stop the Progress Bar. You have to define the number of steps when you start the progress, then advance the Progress Bar after each step:
 
     $users = App\User::all();
 
-    $this->output->progressStart(count($users));
+    $bar = $this->output->createProgressBar(count($users));
 
     foreach ($users as $user) {
-        $this->doSomething($user);
+        $this->performTask($user);
 
-        $this->output->progressAdvance();
+        $bar->advance();
     }
 
-    $this->output->progressFinish();
+    $bar->finish();
 
 For more advanced options, check out the [Symfony Progress Bar component documentation](http://symfony.com/doc/2.7/components/console/helpers/progressbar.html).
 
@@ -293,16 +303,16 @@ For more advanced options, check out the [Symfony Progress Bar component documen
 
 Once your command is finished, you need to register it with Artisan so it will be available for use. This is done within the `app/Console/Kernel.php` file.
 
-Within this file, you will find a list of commands in the `commands` property. To register your command, simply add it to this list. When Artisan boots, all the commands listed in this property will be resolved by the [service container](/docs/{{version}}/container) and registered with Artisan:
+Within this file, you will find a list of commands in the `commands` property. To register your command, simply add the class name to the list. When Artisan boots, all the commands listed in this property will be resolved by the [service container](/docs/{{version}}/container) and registered with Artisan:
 
     protected $commands = [
-        'App\Console\Commands\SendEmails'
+        Commands\SendEmails::class
     ];
 
 <a name="calling-commands-via-code"></a>
 ## Calling Commands Via Code
 
-Sometimes you may wish to execute an Artisan command outside of the CLI. For example, you may wish to fire an Artisan command from an route or controller. You may use the `call` method on the `Artisan` facade to accomplish this. The `call` method accepts the name of the command as the first argument, and an array of command parameters as the second argument. The exit code will be returned:
+Sometimes you may wish to execute an Artisan command outside of the CLI. For example, you may wish to fire an Artisan command from a route or controller. You may use the `call` method on the `Artisan` facade to accomplish this. The `call` method accepts the name of the command as the first argument, and an array of command parameters as the second argument. The exit code will be returned:
 
     Route::get('/foo', function () {
         $exitCode = Artisan::call('email:send', [
@@ -321,6 +331,12 @@ Using the `queue` method on the `Artisan` facade, you may even queue Artisan com
 
         //
     });
+
+If you need to specify the value of an option that does not accept string values, such as the `--force` flag on the `migrate:refresh` command, you may pass a boolean `true` or `false`:
+
+    $exitCode = Artisan::call('migrate:refresh', [
+        '--force' => true,
+    ]);
 
 ### Calling Commands From Other Commands
 

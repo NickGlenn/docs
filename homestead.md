@@ -1,185 +1,224 @@
 # Laravel Homestead
 
 - [Introduction](#introduction)
-- [Included Software](#included-software)
 - [Installation & Setup](#installation-and-setup)
+    - [First Steps](#first-steps)
+    - [Configuring Homestead](#configuring-homestead)
+    - [Launching The Vagrant Box](#launching-the-vagrant-box)
+    - [Per Project Installation](#per-project-installation)
+    - [Installing MariaDB](#installing-mariadb)
 - [Daily Usage](#daily-usage)
-- [Ports](#ports)
-- [Blackfire Profiler](#blackfire-profiler)
+    - [Accessing Homestead Globally](#accessing-homestead-globally)
+    - [Connecting Via SSH](#connecting-via-ssh)
+    - [Connecting To Databases](#connecting-to-databases)
+    - [Adding Additional Sites](#adding-additional-sites)
+    - [Configuring Cron Schedules](#configuring-cron-schedules)
+    - [Ports](#ports)
+- [Network Interfaces](#network-interfaces)
 
 <a name="introduction"></a>
 ## Introduction
 
 Laravel strives to make the entire PHP development experience delightful, including your local development environment. [Vagrant](http://vagrantup.com) provides a simple, elegant way to manage and provision Virtual Machines.
 
-Laravel Homestead is an official, pre-packaged Vagrant "box" that provides you a wonderful development environment without requiring you to install PHP, HHVM, a web server, and any other server software on your local machine. No more worrying about messing up your operating system! Vagrant boxes are completely disposable. If something goes wrong, you can destroy and re-create the box in minutes!
+Laravel Homestead is an official, pre-packaged Vagrant box that provides you a wonderful development environment without requiring you to install PHP, HHVM, a web server, and any other server software on your local machine. No more worrying about messing up your operating system! Vagrant boxes are completely disposable. If something goes wrong, you can destroy and re-create the box in minutes!
 
-Homestead runs on any Windows, Mac, or Linux system, and includes the Nginx web server, PHP 5.6, MySQL, Postgres, Redis, Memcached, Node, and all of the other goodies you need to develop amazing Laravel applications.
+Homestead runs on any Windows, Mac, or Linux system, and includes the Nginx web server, PHP 7.0, MySQL, Postgres, Redis, Memcached, Node, and all of the other goodies you need to develop amazing Laravel applications.
 
-> **Note:** If you are using Windows, you may need to enable hardware virtualization (VT-x). It can usually be enabled via your BIOS.
-
-Homestead is currently built and tested using Vagrant 1.7.
+> **Note:** If you are using Windows, you may need to enable hardware virtualization (VT-x). It can usually be enabled via your BIOS. If you are using Hyper-V on a UEFI system you may additionally need to disable Hyper-V in order to access VT-x.
 
 <a name="included-software"></a>
-## Included Software
+### Included Software
 
 - Ubuntu 14.04
-- PHP 5.6
+- Git
+- PHP 7.0
 - HHVM
 - Nginx
 - MySQL
+- MariaDB
+- Sqlite3
 - Postgres
+- Composer
 - Node (With PM2, Bower, Grunt, and Gulp)
 - Redis
 - Memcached
 - Beanstalkd
-- [Laravel Envoy](/docs/{{version}}/envoy)
-- [Blackfire Profiler](#blackfire-profiler)
 
 <a name="installation-and-setup"></a>
 ## Installation & Setup
 
-### Installing VirtualBox / VMware & Vagrant
+<a name="first-steps"></a>
+### First Steps
 
-Before launching your Homestead environment, you must install [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](http://www.vagrantup.com/downloads.html). Both of these software packages provide easy-to-use visual installers for all popular operating systems.
+Before launching your Homestead environment, you must install [VirtualBox 5.x](https://www.virtualbox.org/wiki/Downloads) or [VMWare](http://www.vmware.com) as well as [Vagrant](http://www.vagrantup.com/downloads.html). All of these software packages provide easy-to-use visual installers for all popular operating systems.
 
-#### VMware
+To use the VMware provider, you will need to purchase both VMware Fusion / Workstation and the [VMware Vagrant plug-in](http://www.vagrantup.com/vmware). Though it is not free, VMware can provide faster shared folder performance out of the box.
 
-In addition to VirtualBox, Homestead also supports VMware. To use the VMware provider, you will need to purchase both VMware Fusion / Desktop and the [VMware Vagrant plug-in](http://www.vagrantup.com/vmware). VMware provides much faster shared folder performance out of the box.
-
-### Adding The Vagrant Box
+#### Installing The Homestead Vagrant Box
 
 Once VirtualBox / VMware and Vagrant have been installed, you should add the `laravel/homestead` box to your Vagrant installation using the following command in your terminal. It will take a few minutes to download the box, depending on your Internet connection speed:
 
-	vagrant box add laravel/homestead
+    vagrant box add laravel/homestead
 
-If this command fails, you may have an old version of Vagrant that requires the full URL:
+If this command fails, make sure your Vagrant installation is up to date.
 
-	vagrant box add laravel/homestead https://atlas.hashicorp.com/laravel/boxes/homestead
+#### Installing Homestead
 
-### Installing Homestead
+You may install Homestead by simply cloning the repository. Consider cloning the repository into a `Homestead` folder within your "home" directory, as the Homestead box will serve as the host to all of your Laravel projects:
 
-You may install Homestead manually by simply cloning the repository. Consider cloning the repository into a `Homestead` folder within your "home" directory, as the Homestead box will serve as the host to all of your Laravel (and PHP) projects:
+    cd ~
 
-	git clone https://github.com/laravel/homestead.git Homestead
+    git clone https://github.com/laravel/homestead.git Homestead
 
-Once you have cloned the Homestead repository, run the `bash init.sh` command from the Homestead directory to create the `Homestead.yaml` configuration file:
+Once you have cloned the Homestead repository, run the `bash init.sh` command from the Homestead directory to create the `Homestead.yaml` configuration file. The `Homestead.yaml` file will be placed in the `~/.homestead` hidden directory:
 
-	bash init.sh
+    bash init.sh
 
-The `Homestead.yaml` file will be placed in your `~/.homestead` directory.
+<a name="configuring-homestead"></a>
+### Configuring Homestead
 
-### Configure Your Provider
+#### Setting Your Provider
 
-The `provider` key in your `Homestead.yaml` file indicates which Vagrant provider should be used: `virtualbox` or `vmware_fusion`. You may set this to whichever provider you prefer.
+The `provider` key in your `~/.homestead/Homestead.yaml` file indicates which Vagrant provider should be used: `virtualbox`, `vmware_fusion`, or `vmware_workstation`. You may set this to the provider you prefer:
 
-	provider: virtualbox
+    provider: virtualbox
 
-### Set Your SSH Key
+#### Configuring Shared Folders
 
-In the `Homestead.yaml` file, you can also configure the path to your public SSH key, as well as the folders you wish to be shared between your main machine and the Homestead virtual machine.
+The `folders` property of the `Homestead.yaml` file lists all of the folders you wish to share with your Homestead environment. As files within these folders are changed, they will be kept in sync between your local machine and the Homestead environment. You may configure as many shared folders as necessary:
 
-Don't have an SSH key? On Mac and Linux, you can generally create an SSH key pair using the following command:
+    folders:
+        - map: ~/Code
+          to: /home/vagrant/Code
 
-	ssh-keygen -t rsa -C "you@homestead"
+To enable [NFS](http://docs.vagrantup.com/v2/synced-folders/nfs.html), just add a simple flag to your synced folder configuration:
 
-On Windows, you may install [Git](http://git-scm.com/) and use the `Git Bash` shell included with Git to issue the command above. Alternatively, you may use [PuTTY](http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html) and [PuTTYgen](http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html).
+    folders:
+        - map: ~/Code
+          to: /home/vagrant/Code
+          type: "nfs"
 
-Once you have created a SSH key, specify the public key's path in the `authorize` property of your `Homestead.yaml` file.
+#### Configuring Nginx Sites
 
-### Configure Your Shared Folders
+Not familiar with Nginx? No problem. The `sites` property allows you to easily map a "domain" to a folder on your Homestead environment. A sample site configuration is included in the `Homestead.yaml` file. Again, you may add as many sites to your Homestead environment as necessary. Homestead can serve as a convenient, virtualized environment for every Laravel project you are working on:
 
-The `folders` property of the `Homestead.yaml` file lists all of the folders you wish to share with your Homestead environment. As files within these folders are changed, they will be kept in sync between your local machine and the Homestead environment. You may configure as many shared folders as necessary!
-
-	folders:
-	    - map: ~/Code
-	      to: /home/vagrant/Code
-
-#### NFS Folders
-
-To enable [NFS](http://docs.vagrantup.com/v2/synced-folders/nfs.html), just add a simple flag to your synced folder:
-
-	folders:
-	    - map: ~/Code
-	      to: /home/vagrant/Code
-	      type: "nfs"
-
-### Configure Your Nginx Sites
-
-Not familiar with Nginx? No problem. The `sites` property allows you to easily map a "domain" to a folder on your Homestead environment. A sample site configuration is included in the `Homestead.yaml` file. Again, you may add as many sites to your Homestead environment as necessary. Homestead can serve as a convenient, virtualized environment for every Laravel project you are working on!
-
-	sites:
-	    - map: homestead.app
-	      to: /home/vagrant/Code/Laravel/public
-
-#### HHVM Sites
+    sites:
+        - map: homestead.app
+          to: /home/vagrant/Code/Laravel/public
 
 You can make any Homestead site use [HHVM](http://hhvm.com) by setting the `hhvm` option to `true`:
 
-	sites:
-	    - map: homestead.app
-	      to: /home/vagrant/Code/Laravel/public
-	      hhvm: true
+    sites:
+        - map: homestead.app
+          to: /home/vagrant/Code/Laravel/public
+          hhvm: true
 
-Each site will be accessible by HTTP via port 8000 and HTTPS via port 44300.
+If you change the `sites` property after provisioning the Homestead box, you should re-run `vagrant reload --provision`  to update the Nginx configuration on the virtual machine.
 
-### Bash Aliases
+#### The Hosts File
 
-To add Bash aliases to your Homestead box, simply add to the `aliases` file in the root of the `~/.homestead` directory.
+You must add the "domains" for your Nginx sites to the `hosts` file on your machine. The `hosts` file will redirect requests for your Homestead sites into your Homestead machine. On Mac and Linux, this file is located at `/etc/hosts`. On Windows, it is located at `C:\Windows\System32\drivers\etc\hosts`. The lines you add to this file will look like the following:
 
-### Launch The Vagrant Box
+    192.168.10.10  homestead.app
 
-Once you have edited the `Homestead.yaml` to your liking, run the `vagrant up` command from your Homestead directory.
+Make sure the IP address listed is the one set in your `~/.homestead/Homestead.yaml` file. Once you have added the domain to your `hosts` file and launched the Vagrant box you will be able to access the site via your web browser:
 
-Vagrant will boot the virtual machine, and configure your shared folders and Nginx sites automatically! To destroy the machine, you may use the `vagrant destroy --force` command.
+    http://homestead.app
 
-Don't forget to add the "domains" for your Nginx sites to the `hosts` file on your machine! The `hosts` file will redirect your requests for the local domains into your Homestead environment. On Mac and Linux, this file is located at `/etc/hosts`. On Windows, it is located at `C:\Windows\System32\drivers\etc\hosts`. The lines you add to this file will look like the following:
+<a name="launching-the-vagrant-box"></a>
+### Launching The Vagrant Box
 
-	192.168.10.10  homestead.app
+Once you have edited the `Homestead.yaml` to your liking, run the `vagrant up` command from your Homestead directory. Vagrant will boot the virtual machine and automatically configure your shared folders and Nginx sites.
 
-Make sure the IP address listed is the one you set in your `Homestead.yaml` file. Once you have added the domain to your `hosts` file, you can access the site via your web browser!
+To destroy the machine, you may use the `vagrant destroy --force` command.
 
-	http://homestead.app
+<a name="per-project-installation"></a>
+### Per Project Installation
 
-To learn how to connect to your databases, read on!
+Instead of installing Homestead globally and sharing the same Homestead box across all of your projects, you may instead configure a Homestead instance for each project you manage. Installing Homestead per project may be beneficial if you wish to ship a `Vagrantfile` with your project, allowing others working on the project to simply `vagrant up`.
+
+To install Homestead directly into your project, require it using Composer:
+
+    composer require laravel/homestead --dev
+
+Once Homestead has been installed, use the `make` command to generate the `Vagrantfile` and `Homestead.yaml` file in your project root. The `make` command will automatically configure the `sites` and `folders` directives in the `Homestead.yaml` file.
+
+Mac / Linux:
+
+    php vendor/bin/homestead make
+
+Windows:
+
+	vendor\\bin\\homestead make
+
+Next, run the `vagrant up` command in your terminal and access your project at `http://homestead.app` in your browser. Remember, you will still need to add an `/etc/hosts` file entry for `homestead.app` or the domain of your choice.
+
+<a name="installing-mariadb"></a>
+### Installing MariaDB
+
+If you prefer to use MariaDB instead of MySQL, you may add the `mariadb` option to your `Homestead.yaml` file. This option will remove MySQL and install MariaDB. MariaDB serves as a drop-in replacement for MySQL so you should still use the `mysql` database driver in your application's database configuration:
+
+    box: laravel/homestead
+    ip: "192.168.20.20"
+    memory: 2048
+    cpus: 4
+    provider: virtualbox
+    mariadb: true
 
 <a name="daily-usage"></a>
 ## Daily Usage
 
+<a name="accessing-homestead-globally"></a>
+### Accessing Homestead Globally
+
+Sometimes you may want to `vagrant up` your Homestead machine from anywhere on your filesystem. You can do this by adding a simple Bash function to your Bash profile. This function will allow you to run any Vagrant command from anywhere on your system and will automatically point that command to your Homestead installation:
+
+    function homestead() {
+        ( cd ~/Homestead && vagrant $* )
+    }
+
+Make sure to tweak the `~/Homestead` path in the function to the location of your actual Homestead installation. Once the function is installed, you may run commands like `homestead up` or `homestead ssh` from anywhere on your system.
+
+<a name="connecting-via-ssh"></a>
 ### Connecting Via SSH
 
-Since you will probably need to SSH into your Homestead machine frequently, consider creating an "alias" on your host machine to quickly SSH into the Homestead box:
+You can SSH into your virtual machine by issuing the `vagrant ssh` terminal command from your Homestead directory.
 
-	alias vm="ssh vagrant@127.0.0.1 -p 2222"
+But, since you will probably need to SSH into your Homestead machine frequently, consider adding the "function" described above to your host machine to quickly SSH into the Homestead box.
 
-Once you create this alias, you can simply use the "vm" command to SSH into your Homestead machine from anywhere on your system.
+<a name="connecting-to-databases"></a>
+### Connecting To Databases
 
-**Alternatively, you can use the `vagrant ssh` command from your Homestead directory.**
+A `homestead` database is configured for both MySQL and Postgres out of the box. For even more convenience, Laravel's `.env` file configures the framework to use this database out of the box.
 
-### Connecting To Your Databases
+To connect to your MySQL or Postgres database from your host machine via Navicat or Sequel Pro, you should connect to `127.0.0.1` and port `33060` (MySQL) or `54320` (Postgres). The username and password for both databases is `homestead` / `secret`.
 
-A `homestead` database is configured for both MySQL and Postgres out of the box. For even more convenience, Laravel's `local` database configuration is set to use this database by default.
+> **Note:** You should only use these non-standard ports when connecting to the databases from your host machine. You will use the default 3306 and 5432 ports in your Laravel database configuration file since Laravel is running _within_ the virtual machine.
 
-To connect to your MySQL or Postgres database from your main machine via Navicat or Sequel Pro, you should connect to `127.0.0.1` and port 33060 (MySQL) or 54320 (Postgres). The username and password for both databases is `homestead` / `secret`.
-
-> **Note:** You should only use these non-standard ports when connecting to the databases from your main machine. You will use the default 3306 and 5432 ports in your Laravel database configuration file since Laravel is running _within_ the Virtual Machine.
-
+<a name="adding-additional-sites"></a>
 ### Adding Additional Sites
 
-Once your Homestead environment is provisioned and running, you may want to add additional Nginx sites for your Laravel applications. You can run as many Laravel installations as you wish on a single Homestead environment. There are two ways to do this: First, you may simply add the sites to your `Homestead.yaml` file and then run `vagrant provision` from your Homestead directory.
+Once your Homestead environment is provisioned and running, you may want to add additional Nginx sites for your Laravel applications. You can run as many Laravel installations as you wish on a single Homestead environment. To add an additional site, simply add the site to your `~/.homestead/Homestead.yaml` file and then run the `vagrant provision` terminal command from your Homestead directory.
 
-> **Note:** This process is destructive. When running the `provision` command, your existing databases will be destroyed and recreated.
+<a name="configuring-cron-schedules"></a>
+### Configuring Cron Schedules
 
-Alternatively, you may use the `serve` script that is available on your Homestead environment. To use the `serve` script, SSH into your Homestead environment and run the following command:
+Laravel provides a convenient way to [schedule Cron jobs](/docs/{{version}}/scheduling) by scheduling a single `schedule:run` Artisan command to be run every minute. The `schedule:run` command will examine the job scheduled defined in your `App\Console\Kernel` class to determine which jobs should be run.
 
-	serve domain.app /home/vagrant/Code/path/to/public/directory 80
+If you would like the `schedule:run` command to be run for a Homestead site, you may set the `schedule` option to `true` when defining the site:
 
-> **Note:** After running the `serve` command, do not forget to add the new site to the `hosts` file on your main machine!
+    sites:
+        - map: homestead.app
+          to: /home/vagrant/Code/Laravel/public
+          schedule: true
+
+The Cron job for the site will be defined in the `/etc/cron.d` folder of the virtual machine.
 
 <a name="ports"></a>
-## Ports
+### Ports
 
-The following ports are forwarded to your Homestead environment:
+By default, the following ports are forwarded to your Homestead environment:
 
 - **SSH:** 2222 &rarr; Forwards To 22
 - **HTTP:** 8000 &rarr; Forwards To 80
@@ -187,28 +226,35 @@ The following ports are forwarded to your Homestead environment:
 - **MySQL:** 33060 &rarr; Forwards To 3306
 - **Postgres:** 54320 &rarr; Forwards To 5432
 
-### Adding Additional Ports
+#### Forwarding Additional Ports
 
 If you wish, you may forward additional ports to the Vagrant box, as well as specify their protocol:
 
-	ports:
-	    - send: 93000
-	      to: 9300
-	    - send: 7777
-	      to: 777
-	      protocol: udp
+    ports:
+        - send: 93000
+          to: 9300
+        - send: 7777
+          to: 777
+          protocol: udp
 
-<a name="blackfire-profiler"></a>
-## Blackfire Profiler
+<a name="network-interfaces"></a>
+## Network Interfaces
 
-[Blackfire Profiler](https://blackfire.io) by SensioLabs automatically gathers data about your code's execution, such as RAM, CPU time, and disk I/O. Homestead makes it a breeze to use this profiler for your own applications.
+The `networks` property of the `Homestead.yaml` configures network interfaces for your Homestead environment. You may configure as many interfaces as necessary:
 
-All of the proper packages have already been installed on your Homestead box, you simply need to set a Blackfire **Server** ID and token in your `Homestead.yaml` file:
+    networks:
+        - type: "private_network"
+          ip: "192.168.10.20"
 
-	blackfire:
-	    - id: your-server-id
-	      token: your-server-token
-	      client-id: your-client-id
-	      client-token: your-client-token
+To enable a [bridged](https://www.vagrantup.com/docs/networking/public_network.html) interface, configure a `bridge` setting and change the network type to `public_network`:
 
-Once you have configured your Blackfire credentials, re-provision the box using `vagrant provision` from your Homestead directory. Of course, be sure to review the [Blackfire documentation](https://blackfire.io/getting-started) to learn how to install the Blackfire companion extension for your web browser.
+    networks:
+        - type: "public_network"
+          ip: "192.168.10.20"
+          bridge: "en1: Wi-Fi (AirPort)"
+
+To enable [DHCP](https://www.vagrantup.com/docs/networking/public_network.html), just remove the `ip` option from your configuration:
+
+    networks:
+        - type: "public_network"
+          bridge: "en1: Wi-Fi (AirPort)"
